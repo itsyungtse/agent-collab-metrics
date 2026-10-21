@@ -29,9 +29,14 @@ def read_events(session_file: Path) -> Iterator[Event]:
                 yield from _events_from_record(record)
 
 
-def read_all_events(projects_directory: Path) -> Iterator[Event]:
+def read_sessions(projects_directory: Path) -> Iterator[list[Event]]:
     for session_file in sorted(projects_directory.glob("*/*.jsonl")):
-        yield from read_events(session_file)
+        yield list(read_events(session_file))
+
+
+def read_all_events(projects_directory: Path) -> Iterator[Event]:
+    for session_events in read_sessions(projects_directory):
+        yield from session_events
 
 
 def _parse_line(line: str) -> dict | None:

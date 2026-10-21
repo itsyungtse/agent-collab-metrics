@@ -1,0 +1,7 @@
+{
+  "name": "agent-collab-metrics",
+  "private": true,
+  "scripts": {
+    "report": "python3 -m agent_collab_metrics.reaction_report"
+  }
+}

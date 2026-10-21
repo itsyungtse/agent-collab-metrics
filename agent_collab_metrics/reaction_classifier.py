@@ -31,6 +31,7 @@ class ReactionToReply:
 
 @dataclass(frozen=True)
 class PromptWithReply:
+    project_directory: str
     agent_reply: str
     prompt: str
 
@@ -44,7 +45,7 @@ def collect_prompts_after_replies(session_events: list[Event]) -> list[PromptWit
         if event.kind == "assistant_text":
             last_agent_reply = event.text
         elif is_human_prompt(event) and last_agent_reply:
-            prompts_with_replies.append(PromptWithReply(last_agent_reply, event.text))
+            prompts_with_replies.append(PromptWithReply(event.project_directory, last_agent_reply, event.text))
     return prompts_with_replies
 
 

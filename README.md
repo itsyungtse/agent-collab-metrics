@@ -31,6 +31,23 @@ Phase 2 (secondary):
 
 Deliberately skipped until phase 1 shows a pattern: reply length, token usage, question-type classification.
 
+## Classifying reactions with a decision model
+
+Keywords miss most corrections, so each user message is classified by a local Ollama decision model (`nimble`) through the System One endpoint (`POST /v1/systemone`, Ollama 0.35.0+).
+
+- Input: the end of the agent's previous reply and the user's message.
+- Output: one of `correction`, `confusion`, `accept`, `new_request`, with probabilities and a confidence score.
+- Everything stays local. Results are written to `data/reactions.jsonl` (git-ignored) with the label, confidence and a few reply traits (length, code block, English term count), never the message text.
+
+```sh
+npm run benchmark   # classify a 200-prompt sample and time it
+npm run classify    # classify every prompt (about 10 minutes)
+npm run report      # label rates per project and reply traits per label
+npm run summary     # keyword-based turns, corrections, interruptions, exploration per project
+```
+
+The labels are not hand-validated yet.
+
 ## Plan
 
 1. Parse Claude Code `.jsonl` into a flat table of events (user, assistant, tool use) with timestamps.

@@ -71,6 +71,7 @@ Run `/agent-collab-metrics <command>`, or ask Claude in your own words.
 |---|---|
 | `setup` | Pick the decision model, add the Stop hook and label past replies |
 | `report [--since-rules] [--confidence 0.6] [--quote-characters 500]` | Show label rates per project and the sessions with the most problems |
+| `trend` | Chart the weekly correction and confusion rates, marking the weeks the rules were updated, to check whether the rules help |
 | `rules` | Draft rules from the problem sessions and write them into `~/.claude/CLAUDE.md` after you approve |
 | `classify [--latest N]` | Label past replies again from scratch |
 | `benchmark [sample size]` | Time the decision model on a sample of past replies (200 by default) |
@@ -92,7 +93,7 @@ Everything agent-collab-metrics writes:
 | `~/.claude/CLAUDE.md` | The `agent-collab-metrics` rules block |
 | `~/.agent-collab-metrics/config.json` | The decision model you picked |
 | `~/.agent-collab-metrics/reactions.jsonl` | One label per message |
-| `~/.agent-collab-metrics/state.json` | When rules were last applied |
+| `~/.agent-collab-metrics/state.json` | When rules were applied |
 
 ## Update and uninstall
 
@@ -130,6 +131,7 @@ node src/setup.ts --model nimble    # check the model, save it, add the Stop hoo
 npm run classify -- --latest 200    # label the latest 200 messages; omit --latest for all
 npm run report -- --since-rules     # only messages after the last rules update
 npm run report -- --confidence 0.6 --quote-characters 500
+npm run trend                       # weekly correction and confusion rates
 npm run benchmark                   # label a 200-message sample and time it
 npm test
 npm run typecheck

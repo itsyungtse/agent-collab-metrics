@@ -1,9 +1,9 @@
 ---
 name: agent-collab-metrics
-description: Classify how the user reacts to each agent reply (correction, confusion, accept, new request) with a local Ollama decision model, report where collaboration goes wrong, and turn recurring corrections and confusion into rules in ~/.claude/CLAUDE.md. Use when the user wants to set up collaboration metrics, see the collaboration report, benchmark the decision model, when the agent-collab-metrics hook says it is time to update rules, or when the user asks to update the rules learned from past conversations.
-argument-hint: "[setup | classify | report | benchmark | rules] [flags]"
+description: Classify how the user reacts to each agent reply (correction, confusion, accept, new request) with a local Ollama decision model, report where collaboration goes wrong, and turn recurring corrections and confusion into rules in ~/.claude/CLAUDE.md. Use when the user wants to set up collaboration metrics, see the collaboration report, check whether the rules reduced problems over time, benchmark the decision model, when the agent-collab-metrics hook says it is time to update rules, or when the user asks to update the rules learned from past conversations.
+argument-hint: "[setup | classify | report | trend | benchmark | rules] [flags]"
 metadata:
-  version: "0.0.1"
+  version: "0.0.2"
 ---
 
 # Agent collab metrics
@@ -21,6 +21,7 @@ The first word after `/agent-collab-metrics` picks the command. Pass the remaini
 | `setup` | Pick the decision model, add the Stop hook, classify past replies |
 | `classify [--latest N]` | Classify past replies again from scratch |
 | `report [--since-rules] [--confidence 0.6] [--quote-characters 500]` | Label rates per project and the sessions with the most problems |
+| `trend` | Weekly `correction` and `confusion` rates, marking the weeks the rules were updated |
 | `benchmark [sample size]` | Time the decision model on a sample of past replies (200 by default) |
 | `rules` | Draft rules from the problem sessions and write them into `~/.claude/CLAUDE.md` after the user confirms |
 
@@ -46,6 +47,12 @@ Also run this when the user wants to change the decision model.
 
 1. Run `node <skill-dir>/src/report.ts` with the user's flags.
 2. Point out the projects with the highest `correction` and `confusion` rates, then the sessions with the most problems and what the quotes have in common. Keep the full output available if the user wants it.
+
+## trend
+
+1. Run `node <skill-dir>/src/trend.ts`.
+2. Say whether the combined `correction` and `confusion` rate went down in the weeks after each `<- rules updated` mark. Weeks with few replies swing a lot, so don't draw conclusions from them. If there are no marks yet, say that rules have not been applied, so the chart only shows the baseline.
+3. If the labels cover only the last few days but the user has older sessions, suggest `classify` without `--latest` to fill in the earlier weeks.
 
 ## benchmark
 

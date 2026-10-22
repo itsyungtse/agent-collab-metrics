@@ -1,12 +1,13 @@
 {
   "name": "agent-collab-metrics",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "scripts": {
     "classify": "node src/classify-all.ts",
     "benchmark": "node src/benchmark.ts",
     "report": "node src/report.ts",
+    "trend": "node src/trend.ts",
     "test": "node --test 'tests/*.test.ts'",
     "typecheck": "tsc"
   },

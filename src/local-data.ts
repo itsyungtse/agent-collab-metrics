@@ -35,8 +35,19 @@ export function readRulesAppliedAt(): Date | null {
   return rulesAppliedAt ? new Date(rulesAppliedAt) : null;
 }
 
+export function readRulesAppliedHistory(): Date[] {
+  const { rulesAppliedAt, rulesAppliedHistory } = readJsonFile(STATE_FILE);
+  // state.json from older versions only has the latest rulesAppliedAt.
+  const appliedTimes: string[] = rulesAppliedHistory ?? (rulesAppliedAt ? [rulesAppliedAt] : []);
+  return appliedTimes.map((appliedTime) => new Date(appliedTime));
+}
+
 export function saveRulesAppliedAt(appliedAt: Date): void {
-  writeJsonFile(STATE_FILE, { ...readJsonFile(STATE_FILE), rulesAppliedAt: appliedAt.toISOString() });
+  writeJsonFile(STATE_FILE, {
+    ...readJsonFile(STATE_FILE),
+    rulesAppliedAt: appliedAt.toISOString(),
+    rulesAppliedHistory: [...readRulesAppliedHistory(), appliedAt].map((appliedTime) => appliedTime.toISOString()),
+  });
 }
 
 export function readReactionRecords(reactionsFile = REACTIONS_FILE): ReactionRecord[] {

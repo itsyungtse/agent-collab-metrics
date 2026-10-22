@@ -1,10 +1,8 @@
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { readSessions } from "./claude-code.ts";
+import { PROJECTS_DIRECTORY, readModelName } from "./local-data.ts";
 import { median } from "./median.ts";
 import { classifyReaction, collectPromptsAfterReplies } from "./reaction-classifier.ts";
 
-const PROJECTS_DIRECTORY = join(homedir(), ".claude", "projects");
 const DEFAULT_SAMPLE_SIZE = 200;
 const RANDOM_SEED = 0;
 
@@ -31,13 +29,14 @@ function sample<Item>(items: Item[], size: number): Item[] {
 const sampleSize = Number(process.argv[2] ?? DEFAULT_SAMPLE_SIZE);
 const allPrompts = readSessions(PROJECTS_DIRECTORY).flatMap(collectPromptsAfterReplies);
 const promptsToClassify = sample(allPrompts, sampleSize);
+const modelName = readModelName();
 
 const secondsPerCall: number[] = [];
 const labelCounts: Record<string, number> = {};
 const startedAt = performance.now();
 for (const promptWithReply of promptsToClassify) {
   const callStartedAt = performance.now();
-  const { label } = await classifyReaction(promptWithReply);
+  const { label } = await classifyReaction(promptWithReply, modelName);
   labelCounts[label] = (labelCounts[label] ?? 0) + 1;
   secondsPerCall.push((performance.now() - callStartedAt) / 1000);
 }

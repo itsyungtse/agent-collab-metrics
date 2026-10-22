@@ -1,14 +1,16 @@
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { readSessions, type Event } from "./claude-code.ts";
+import { PROJECTS_DIRECTORY, readReactionRecords, readRulesAppliedAt } from "./local-data.ts";
 import { median } from "./median.ts";
 import { measureSession, withoutIdeContext, type SessionMetrics } from "./metrics.ts";
-import { collectPromptsAfterReplies, type PromptWithReply } from "./reaction-classifier.ts";
+import {
+  collectPromptsAfterReplies,
+  promptKey,
+  recordsAfter,
+  type PromptWithReply,
+  type ReactionRecord,
+} from "./reaction-classifier.ts";
 
-const PROJECTS_DIRECTORY = join(homedir(), ".claude", "projects");
-const DEFAULT_REACTIONS_FILE = join("data", "reactions.jsonl");
 const MIN_RECORDS_PER_PROJECT = 20;
 const LABELS = ["correction", "confusion", "accept", "new_request"];
 const PROBLEM_LABELS = ["confusion", "correction"];
@@ -20,36 +22,19 @@ const { values: options, positionals } = parseArgs({
   options: {
     confidence: { type: "string", default: "0.8" },
     "quote-characters": { type: "string", default: "200" },
+    "since-rules": { type: "boolean", default: false },
   },
 });
 const CONFIDENT_THRESHOLD = Number(options.confidence);
 const QUOTE_CHARACTERS = Number(options["quote-characters"]);
 
-interface Reaction {
-  projectDirectory: string;
-  sessionId: string;
-  promptTime: string;
-  label: string;
-  confidence: number;
-  replyCharacters: number;
-  replyHasCodeBlock: boolean;
-  replyEnglishTerms: number;
-}
-
-function readReactions(reactionsFile: string): Reaction[] {
-  return readFileSync(reactionsFile, "utf-8")
-    .split("\n")
-    .filter((line) => line !== "")
-    .map((line) => JSON.parse(line));
-}
-
-function countLabels(reactions: Reaction[]): Record<string, number> {
+function countLabels(reactions: ReactionRecord[]): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const { label } of reactions) counts[label] = (counts[label] ?? 0) + 1;
   return counts;
 }
 
-function printLabelRatesByProject(reactions: Reaction[]): void {
+function printLabelRatesByProject(reactions: ReactionRecord[]): void {
   const reactionsByProject = Map.groupBy(reactions, (reaction) => reaction.projectDirectory);
   console.log("label rates by project (projects with enough prompts)");
   const projectsByPromptCount = [...reactionsByProject].sort(([, left], [, right]) => right.length - left.length);
@@ -61,7 +46,7 @@ function printLabelRatesByProject(reactions: Reaction[]): void {
   }
 }
 
-function describeReplies(label: string, reactions: Reaction[]): string {
+function describeReplies(label: string, reactions: ReactionRecord[]): string {
   if (reactions.length === 0) return `  ${label}: no records`;
   const withCodeBlock = reactions.filter((reaction) => reaction.replyHasCodeBlock).length;
   return (
@@ -72,7 +57,7 @@ function describeReplies(label: string, reactions: Reaction[]): string {
   );
 }
 
-function printReplyTraits(reactions: Reaction[]): void {
+function printReplyTraits(reactions: ReactionRecord[]): void {
   const confident = reactions.filter((reaction) => reaction.confidence >= CONFIDENT_THRESHOLD);
   console.log(
     `\nreply traits (only reactions with confidence >= ${CONFIDENT_THRESHOLD}, ${confident.length} of ${reactions.length})`,
@@ -112,15 +97,11 @@ function printSessionMetricsByProject(allSessionEvents: Event[][]): void {
   }
 }
 
-function promptKey(sessionId: string, promptTime: string): string {
-  return `${sessionId} ${promptTime}`;
-}
-
 function oneLine(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
-function printProblemQuote(problem: Reaction, promptWithReply: PromptWithReply | undefined): void {
+function printProblemQuote(problem: ReactionRecord, promptWithReply: PromptWithReply | undefined): void {
   console.log(`    [${problem.label}] ${problem.promptTime}`);
   if (!promptWithReply) {
     console.log("      (no longer in the session logs)");
@@ -130,7 +111,7 @@ function printProblemQuote(problem: Reaction, promptWithReply: PromptWithReply |
   console.log(`      user:  ${oneLine(withoutIdeContext(promptWithReply.prompt)).slice(0, QUOTE_CHARACTERS)}`);
 }
 
-function printProblemSessions(reactions: Reaction[], allSessionEvents: Event[][]): void {
+function printProblemSessions(reactions: ReactionRecord[], allSessionEvents: Event[][]): void {
   const promptsByKey = new Map(
     allSessionEvents
       .flatMap(collectPromptsAfterReplies)
@@ -158,7 +139,8 @@ function printProblemSessions(reactions: Reaction[], allSessionEvents: Event[][]
   }
 }
 
-const reactions = readReactions(positionals[0] ?? DEFAULT_REACTIONS_FILE);
+const allReactions = readReactionRecords(positionals[0]);
+const reactions = options["since-rules"] ? recordsAfter(allReactions, readRulesAppliedAt()) : allReactions;
 const allSessionEvents = readSessions(PROJECTS_DIRECTORY);
 console.log(`${reactions.length} reactions: ${JSON.stringify(countLabels(reactions))}\n`);
 printLabelRatesByProject(reactions);

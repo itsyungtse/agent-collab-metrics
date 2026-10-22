@@ -26,6 +26,8 @@ export interface ReactionToReply {
 
 export interface PromptWithReply {
   projectDirectory: string;
+  sessionId: string;
+  promptTime: Date;
   agentReply: string;
   prompt: string;
 }
@@ -40,6 +42,8 @@ export function collectPromptsAfterReplies(sessionEvents: Event[]): PromptWithRe
     } else if (isHumanPrompt(event) && lastAgentReply) {
       promptsWithReplies.push({
         projectDirectory: event.projectDirectory,
+        sessionId: event.sessionId,
+        promptTime: event.timestamp,
         agentReply: lastAgentReply,
         prompt: event.text,
       });

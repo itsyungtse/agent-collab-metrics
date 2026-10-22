@@ -20,7 +20,7 @@ Session logs contain private conversation content. They are read locally and nev
 Phase 1 (computable from the logs alone):
 
 1. **Turns per task**: user messages from a request until the user stops following up.
-2. **Correction rate**: how often the next user message rejects or fixes the previous reply (keyword heuristic first).
+2. **Correction rate**: how often the next user message rejects or fixes the previous reply (classified by a decision model, see below).
 3. **Interruption count**: user stops the agent before it finishes.
 4. **Exploration before first edit**: files read and time spent before the first file modification.
 
@@ -37,14 +37,16 @@ Keywords miss most corrections, so each user message is classified by a local Ol
 
 - Input: the end of the agent's previous reply and the user's message.
 - Output: one of `correction`, `confusion`, `accept`, `new_request`, with probabilities and a confidence score.
-- Everything stays local. Results are written to `data/reactions.jsonl` (git-ignored) with the label, confidence and a few reply traits (length, code block, English term count), never the message text.
+- Everything stays local. Results are written to `data/reactions.jsonl` (git-ignored) with the session id, prompt time, label, confidence and a few reply traits (length, code block, English term count), never the message text.
 
 ```sh
 npm run benchmark   # classify a 200-prompt sample and time it
 npm run classify    # classify every prompt (about 10 minutes)
-npm run report      # label rates per project and reply traits per label
-npm run summary     # keyword-based turns, corrections, interruptions, exploration per project
+npm run report      # label rates, turns, interruptions and exploration per project, reply traits per label, quoted problem sessions
+npm run report -- --confidence 0.6 --quote-characters 500   # lower the confidence bar, quote more text
 ```
+
+`report` ends with the sessions that have the most confident `confusion` or `correction` labels, quoting each reply and the user message from the session logs at report time.
 
 The labels are not hand-validated yet.
 

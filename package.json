@@ -3,7 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "summary": "node src/summary.ts",
     "classify": "node src/classify-all.ts",
     "benchmark": "node src/benchmark.ts",
     "report": "node src/report.ts",

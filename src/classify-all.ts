@@ -23,6 +23,8 @@ async function reactionRecord(promptWithReply: PromptWithReply) {
   const reaction = await classifyReaction(promptWithReply);
   return {
     projectDirectory: promptWithReply.projectDirectory,
+    sessionId: promptWithReply.sessionId,
+    promptTime: promptWithReply.promptTime,
     label: reaction.label,
     confidence: reaction.confidence,
     ...describeReply(promptWithReply.agentReply),

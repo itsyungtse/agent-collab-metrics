@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Event } from "../src/claude-code.ts";
 import {
-  countCorrections,
   isHumanPrompt,
   measureExplorationBeforeFirstEdit,
   measureSession,
@@ -45,16 +44,6 @@ test("subagent prompt is not a human prompt", () => {
   assert.equal(isHumanPrompt(prompt("do the task", 0, { isSidechain: true })), false);
 });
 
-test("corrections count only prompts after the agent replied", () => {
-  const sessionEvents = [
-    prompt("不要用 mock"),
-    event("assistant_text", 1, { text: "ok" }),
-    prompt("不是，我說的是前端", 2),
-    prompt("looks good", 3),
-  ];
-  assert.equal(countCorrections(sessionEvents), 1);
-});
-
 test("exploration counts tool calls and distinct files before first edit", () => {
   const sessionEvents = [
     prompt("fix it"),
@@ -71,12 +60,12 @@ test("exploration is null when the session never edits", () => {
   assert.equal(measureExplorationBeforeFirstEdit([prompt("explain"), tool("Read", "/a.py", 1)]), null);
 });
 
-test("session metrics count turns, corrections and interruptions", () => {
+test("session metrics count turns and interruptions", () => {
   const metrics = measureSession([
     prompt("add a button"),
     tool("Edit", "/a.py", 3),
     prompt("[Request interrupted by user]", 4),
     prompt("wrong file", 5),
   ]);
-  assert.deepEqual([metrics?.turns, metrics?.corrections, metrics?.interruptions], [2, 1, 1]);
+  assert.deepEqual([metrics?.turns, metrics?.interruptions], [2, 1]);
 });

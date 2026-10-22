@@ -4,8 +4,6 @@ const EDIT_TOOL_NAMES = ["Edit", "Write", "NotebookEdit"];
 const INTERRUPT_PREFIX = "[Request interrupted by user";
 const SYSTEM_INJECTED_PREFIXES = ["<task-notification>", "<local-command-stdout>", "<local-command-caveat>"];
 const IDE_CONTEXT_PATTERN = /<(ide_opened_file|ide_selection|system-reminder)>.*?<\/\1>/gs;
-const CORRECTION_PATTERN =
-  /^(no|nope)\b|wrong|don't|do not|revert|undo|not what i|不是|不對|不要|錯了|我說的|重做|重新|改回|還原/i;
 
 export interface ExplorationBeforeFirstEdit {
   toolCalls: number;
@@ -17,7 +15,6 @@ export interface SessionMetrics {
   sessionId: string;
   projectDirectory: string;
   turns: number;
-  corrections: number;
   interruptions: number;
   exploration: ExplorationBeforeFirstEdit | null;
 }
@@ -30,24 +27,6 @@ export function isHumanPrompt(event: Event): boolean {
   if (event.kind !== "user_prompt" || event.isSidechain || isInterruption(event)) return false;
   if (SYSTEM_INJECTED_PREFIXES.some((prefix) => event.text.startsWith(prefix))) return false;
   return withoutIdeContext(event.text) !== "";
-}
-
-export function isCorrection(prompt: Event): boolean {
-  return CORRECTION_PATTERN.test(withoutIdeContext(prompt.text));
-}
-
-export function countCorrections(sessionEvents: Event[]): number {
-  let corrections = 0;
-  let agentHasReplied = false;
-  for (const event of sessionEvents) {
-    if (event.isSidechain) continue;
-    if (event.kind === "assistant_text" || event.kind === "tool_use") {
-      agentHasReplied = true;
-    } else if (agentHasReplied && isHumanPrompt(event) && isCorrection(event)) {
-      corrections += 1;
-    }
-  }
-  return corrections;
 }
 
 export function measureExplorationBeforeFirstEdit(sessionEvents: Event[]): ExplorationBeforeFirstEdit | null {
@@ -78,13 +57,12 @@ export function measureSession(sessionEvents: Event[]): SessionMetrics | null {
     sessionId: sessionEvents[0].sessionId,
     projectDirectory: sessionEvents[0].projectDirectory,
     turns: mainEvents.filter(isHumanPrompt).length,
-    corrections: countCorrections(sessionEvents),
     interruptions: mainEvents.filter(isInterruption).length,
     exploration: measureExplorationBeforeFirstEdit(sessionEvents),
   };
 }
 
-function withoutIdeContext(text: string): string {
+export function withoutIdeContext(text: string): string {
   return text.replace(IDE_CONTEXT_PATTERN, "").trim();
 }
 

@@ -3,7 +3,7 @@ name: agent-collab-metrics
 description: Classify how the user reacts to each agent reply (correction, confusion, accept, new request) with a local Ollama decision model, report where collaboration goes wrong, and turn recurring corrections and confusion into rules in ~/.claude/CLAUDE.md. Use when the user wants to set up collaboration metrics, see the collaboration report, check whether the rules reduced problems over time, benchmark the decision model, when the agent-collab-metrics hook says it is time to update rules, or when the user asks to update the rules learned from past conversations.
 argument-hint: "[setup | classify | report | trend | benchmark | rules] [flags]"
 metadata:
-  version: "0.0.1"
+  version: "0.0.2"
 ---
 
 # Agent collab metrics

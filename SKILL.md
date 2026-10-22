@@ -2,6 +2,8 @@
 name: agent-collab-metrics
 description: Classify how the user reacts to each agent reply (correction, confusion, accept, new request) with a local Ollama decision model, report where collaboration goes wrong, and turn recurring corrections and confusion into rules in ~/.claude/CLAUDE.md. Use when the user wants to set up collaboration metrics, see the collaboration report, benchmark the decision model, when the agent-collab-metrics hook says it is time to update rules, or when the user asks to update the rules learned from past conversations.
 argument-hint: "[setup | classify | report | benchmark | rules] [flags]"
+metadata:
+  version: "0.0.1"
 ---
 
 # Agent collab metrics
@@ -9,8 +11,6 @@ argument-hint: "[setup | classify | report | benchmark | rules] [flags]"
 Every time the agent finishes a reply, a Stop hook classifies the user's latest messages with a local Ollama decision model. After every 500 classified replies, the hook asks the user to run `/agent-collab-metrics rules` to turn the recurring problems into rules in `~/.claude/CLAUDE.md`.
 
 `<skill-dir>` below is the directory that contains this SKILL.md. Data is kept in `~/.agent-collab-metrics/`. Talk to the user in the language they write in.
-
-Only Claude Code sessions are read for now. In Codex, tell the user it is not supported yet and stop.
 
 ## Commands
 

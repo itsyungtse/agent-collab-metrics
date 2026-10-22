@@ -116,7 +116,6 @@ This deletes only the skill files. To finish uninstalling, also remove:
 
 ## Limitations
 
-- **Claude Code only.** Codex CLI stores its logs in a different format (`~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`), and its hooks are still experimental. Codex support comes next.
 - **Labels aren't hand-validated yet.** Treat the rates as a direction rather than a measurement. The quoted problem sessions only use labels with a confidence of 0.8 or higher; to change that threshold, pass `--confidence`.
 - **Ollama has to be running.** If it isn't, the hook does nothing and catches up at your next reply in the same session. If a session ends while Ollama is down, its messages are labeled only when you run `classify` again.
 - **Rules are only as good as the quotes.** A session is quoted only if it has at least two confident problems. Claude is told to leave out any rule it can't tie to a quote. Read the draft before you approve it.
@@ -140,6 +139,5 @@ Labels come from Ollama's System One endpoint (`POST /v1/systemone`). Each reque
 
 ## Roadmap
 
-- Codex CLI support
 - Hand-validate a sample of labels
 - Wait time per reply, and repeated reads of the same file within a session

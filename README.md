@@ -40,26 +40,13 @@ You need:
 - Node 22.18 or later, which runs the TypeScript scripts directly with no build step
 - [Ollama](https://ollama.com) 0.35 or later, with a decision model: `ollama pull nimble`
 
-Install the skill for your user account so it works in every project:
-
-```sh
-npx skills add itsyungtse/agent-collab-metrics -g -a claude-code
-```
-
-This copies the repo into `~/.claude/skills/agent-collab-metrics/`. Leave out `-g` to install it into the current project's `.claude/skills/` instead.
-
-Then run setup in Claude Code:
+Then say this in Claude Code:
 
 ```
-/agent-collab-metrics setup
+Read https://raw.githubusercontent.com/itsyungtse/agent-collab-metrics/main/INSTALL.md and install agent-collab-metrics
 ```
 
-Setup works through these steps:
-
-1. Checks your Node version.
-2. Lists the installed Ollama models that can make decisions and asks which one to use.
-3. Asks whether to label your whole history or only the latest 200 replies.
-4. Shows you the Stop hook, then adds it to `~/.claude/settings.json`.
+Claude installs the skill and runs setup with you. It asks which Ollama model to use and whether to label your whole history or only the latest 200 replies, then shows you the Stop hook before adding it to `~/.claude/settings.json`. To install by hand, see [INSTALL.md](INSTALL.md).
 
 Labeling a full history of about 1,400 replies takes around 10 minutes. If you end up with 500 or more labels, setup offers to draft your first rules right away.
 

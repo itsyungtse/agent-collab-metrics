@@ -1,14 +1,14 @@
 ---
 name: agent-collab-metrics
-description: Classify how the user reacts to each agent reply (correction, confusion, accept, new request) with a local Ollama decision model, report where collaboration goes wrong, and turn recurring corrections and confusion into rules in ~/.claude/CLAUDE.md. Use when the user wants to set up collaboration metrics, see the collaboration report, check whether the rules reduced problems over time, benchmark the decision model, when the agent-collab-metrics hook says it is time to update rules, or when the user asks to update the rules learned from past conversations.
-argument-hint: "[setup | classify | report | trend | benchmark | rules] [flags]"
+description: Classify how the user reacts to each agent reply (correction, confusion, accept, new request) with a local Ollama decision model, report where collaboration goes wrong, and turn recurring corrections and confusion into rules in ~/.claude/CLAUDE.md. Use when the user wants to set up collaboration metrics, see the collaboration report, check whether the rules reduced problems over time, benchmark the decision model, change how many replies the hook waits for before it suggests a rules update, when the agent-collab-metrics hook says it is time to update rules, or when the user asks to update the rules learned from past conversations.
+argument-hint: "[setup | classify | report | trend | benchmark | interval | rules] [flags]"
 metadata:
-  version: "0.0.2"
+  version: "0.0.3"
 ---
 
 # Agent collab metrics
 
-Every time the agent finishes a reply, a Stop hook classifies the user's latest messages with a local Ollama decision model. After every 500 classified replies, the hook asks the user to run `/agent-collab-metrics rules` to turn the recurring problems into rules in `~/.claude/CLAUDE.md`.
+Every time the agent finishes a reply, a Stop hook classifies the user's latest messages with a local Ollama decision model. After every 500 classified replies (change the number with `interval`), the hook asks the user to run `/agent-collab-metrics rules` to turn the recurring problems into rules in `~/.claude/CLAUDE.md`.
 
 `<skill-dir>` below is the directory that contains this SKILL.md. Data is kept in `~/.agent-collab-metrics/`. Talk to the user in the language they write in.
 
@@ -23,6 +23,7 @@ The first word after `/agent-collab-metrics` picks the command. Pass the remaini
 | `report [--since-rules] [--confidence 0.6] [--quote-characters 500]` | Label rates per project and the sessions with the most problems |
 | `trend` | Weekly `correction` and `confusion` rates, marking the weeks the rules were updated |
 | `benchmark [sample size]` | Time the decision model on a sample of past replies (200 by default) |
+| `interval [replies]` | Show or change how many new replies trigger the rules reminder (500 by default) |
 | `rules` | Draft rules from the problem sessions and write them into `~/.claude/CLAUDE.md` after the user confirms |
 
 With no command, run `setup` if `~/.agent-collab-metrics/config.json` does not exist; otherwise show this table. Every command except `setup` needs that file, so run `setup` first when it is missing.
@@ -59,12 +60,17 @@ Also run this when the user wants to change the decision model.
 1. Run `node <skill-dir>/src/benchmark.ts`, adding the sample size if the user gave one.
 2. Report the median and slowest time per reply, and the estimated time to classify the whole history.
 
+## interval
+
+1. Run `node <skill-dir>/src/interval.ts`, adding the number of replies if the user gave one. Without a number it prints the current interval.
+2. The count since the last rules update is kept, so the hook reminds at the next multiple of the new number. If the user wants rules now rather than at the next reminder, offer to run `rules`.
+
 ## rules
 
-Run this when the hook reports 500 new replies, or when the user asks.
+Run this when the hook says it is time to update rules, or when the user asks.
 
 1. Run `node <skill-dir>/src/report.ts --since-rules`.
 2. Read the last section, which quotes the sessions with the most `confusion` or `correction`. Look for what the agent kept doing that the user had to correct or ask about.
 3. Draft 3 to 7 short rules under the heading `## Lessons from past conversations`. Each rule must come from a pattern in the quotes, for example "Explain a technical term in one sentence before using it". Leave out anything you cannot tie to a quote. If the quotes show no clear pattern, say so and stop.
 4. Show the draft, and explain that it replaces the previous rules inside the `agent-collab-metrics` block of `~/.claude/CLAUDE.md`. Wait for the user to confirm or edit it.
-5. Pipe the confirmed rules into `node <skill-dir>/src/apply-rules.ts`, for example with a heredoc. This also restarts the count of 500.
+5. Pipe the confirmed rules into `node <skill-dir>/src/apply-rules.ts`, for example with a heredoc. This also restarts the count for the reminder.

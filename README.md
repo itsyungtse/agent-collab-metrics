@@ -19,7 +19,7 @@ Keyword matching doesn't find these moments. "Wait, why does this need two servi
    - how much the agent explores before its first edit
    - what replies look like before each kind of reaction
    - the sessions with the most confident corrections and confusion, quoted from the logs
-3. **Learn.** After every 500 new labels, the hook suggests `/agent-collab-metrics rules`. Claude reads the quoted sessions and drafts three to seven short rules, each tied to a pattern it found, then shows them to you. Once you approve, they go into a marked block at the end of `~/.claude/CLAUDE.md`. The next update replaces that block, so the file doesn't keep growing.
+3. **Learn.** After every 500 new labels (change the number with `interval`), the hook suggests `/agent-collab-metrics rules`. Claude reads the quoted sessions and drafts three to seven short rules, each tied to a pattern it found, then shows them to you. Once you approve, they go into a marked block at the end of `~/.claude/CLAUDE.md`. The next update replaces that block, so the file doesn't keep growing.
 
 A rules block looks like this:
 
@@ -75,6 +75,7 @@ Run `/agent-collab-metrics <command>`, or ask Claude in your own words.
 | `rules` | Draft rules from the problem sessions and write them into `~/.claude/CLAUDE.md` after you approve |
 | `classify [--latest N]` | Label past replies again from scratch |
 | `benchmark [sample size]` | Time the decision model on a sample of past replies (200 by default) |
+| `interval [replies]` | Show or change how many new labels trigger the rules reminder (500 by default) |
 
 With no command, the skill runs `setup` the first time and lists these commands after that.
 
@@ -91,7 +92,7 @@ Everything agent-collab-metrics writes:
 |---|---|
 | `~/.claude/settings.json` | One Stop hook |
 | `~/.claude/CLAUDE.md` | The `agent-collab-metrics` rules block |
-| `~/.agent-collab-metrics/config.json` | The decision model you picked |
+| `~/.agent-collab-metrics/config.json` | The decision model you picked, and the rules reminder interval if you changed it |
 | `~/.agent-collab-metrics/reactions.jsonl` | One label per message |
 | `~/.agent-collab-metrics/state.json` | When rules were applied |
 
@@ -133,6 +134,7 @@ npm run report -- --since-rules     # only messages after the last rules update
 npm run report -- --confidence 0.6 --quote-characters 500
 npm run trend                       # weekly correction and confusion rates
 npm run benchmark                   # label a 200-message sample and time it
+npm run interval -- 100             # suggest rules every 100 labels; omit the number to print it
 npm test
 npm run typecheck
 ```

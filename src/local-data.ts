@@ -10,6 +10,7 @@ const DATA_DIRECTORY = join(homedir(), ".agent-collab-metrics");
 export const REACTIONS_FILE = join(DATA_DIRECTORY, "reactions.jsonl");
 const CONFIG_FILE = join(DATA_DIRECTORY, "config.json");
 const STATE_FILE = join(DATA_DIRECTORY, "state.json");
+const DEFAULT_RULES_REMINDER_INTERVAL = 500;
 
 export function readJsonFile(file: string): Record<string, any> {
   return existsSync(file) ? JSON.parse(readFileSync(file, "utf-8")) : {};
@@ -28,6 +29,15 @@ export function readModelName(): string {
 
 export function saveModelName(modelName: string): void {
   writeJsonFile(CONFIG_FILE, { ...readJsonFile(CONFIG_FILE), model: modelName });
+}
+
+export function readRulesReminderInterval(): number {
+  const { rulesReminderInterval } = readJsonFile(CONFIG_FILE);
+  return rulesReminderInterval ?? DEFAULT_RULES_REMINDER_INTERVAL;
+}
+
+export function saveRulesReminderInterval(interval: number): void {
+  writeJsonFile(CONFIG_FILE, { ...readJsonFile(CONFIG_FILE), rulesReminderInterval: interval });
 }
 
 export function readRulesAppliedAt(): Date | null {

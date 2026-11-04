@@ -16,6 +16,7 @@ const LABELS = ["correction", "confusion", "accept", "new_request"];
 const PROBLEM_LABELS = ["confusion", "correction"];
 const MIN_PROBLEMS_PER_SESSION = 2;
 const MAX_PROBLEM_SESSIONS = 10;
+const MAX_PREFERENCE_QUOTES = 30;
 
 const { values: options, positionals } = parseArgs({
   allowPositionals: true,
@@ -101,8 +102,8 @@ function oneLine(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
-function printProblemQuote(problem: ReactionRecord, promptWithReply: PromptWithReply | undefined): void {
-  console.log(`    [${problem.label}] ${problem.promptTime}`);
+function printQuote(reaction: ReactionRecord, promptWithReply: PromptWithReply | undefined): void {
+  console.log(`    [${reaction.label}] ${reaction.promptTime}`);
   if (!promptWithReply) {
     console.log("      (no longer in the session logs)");
     return;
@@ -111,15 +112,7 @@ function printProblemQuote(problem: ReactionRecord, promptWithReply: PromptWithR
   console.log(`      user:  ${oneLine(withoutIdeContext(promptWithReply.prompt)).slice(0, QUOTE_CHARACTERS)}`);
 }
 
-function printProblemSessions(reactions: ReactionRecord[], allSessionEvents: Event[][]): void {
-  const promptsByKey = new Map(
-    allSessionEvents
-      .flatMap(collectPromptsAfterReplies)
-      .map((promptWithReply) => [
-        promptKey(promptWithReply.sessionId, promptWithReply.promptTime.toISOString()),
-        promptWithReply,
-      ]),
-  );
+function printProblemSessions(reactions: ReactionRecord[], promptsByKey: Map<string, PromptWithReply>): void {
   const problems = reactions.filter(
     (reaction) => PROBLEM_LABELS.includes(reaction.label) && reaction.confidence >= CONFIDENT_THRESHOLD,
   );
@@ -134,8 +127,22 @@ function printProblemSessions(reactions: ReactionRecord[], allSessionEvents: Eve
   for (const [sessionId, sessionProblems] of problemSessions) {
     console.log(`  ${sessionProblems[0].projectDirectory} session=${sessionId} ${JSON.stringify(countLabels(sessionProblems))}`);
     for (const problem of sessionProblems) {
-      printProblemQuote(problem, promptsByKey.get(promptKey(sessionId, problem.promptTime)));
+      printQuote(problem, promptsByKey.get(promptKey(sessionId, problem.promptTime)));
     }
+  }
+}
+
+function printStatedPreferences(reactions: ReactionRecord[], promptsByKey: Map<string, PromptWithReply>): void {
+  const checkedReactions = reactions.filter((reaction) => reaction.statesPreference !== undefined);
+  const preferences = checkedReactions
+    .filter((reaction) => reaction.statesPreference)
+    .sort((left, right) => right.promptTime.localeCompare(left.promptTime));
+  console.log(
+    `\nmessages that state a lasting preference (newest ${Math.min(preferences.length, MAX_PREFERENCE_QUOTES)}` +
+      ` of ${preferences.length}; ${checkedReactions.length} of ${reactions.length} reactions were checked for preferences)`,
+  );
+  for (const preference of preferences.slice(0, MAX_PREFERENCE_QUOTES)) {
+    printQuote(preference, promptsByKey.get(promptKey(preference.sessionId, preference.promptTime)));
   }
 }
 
@@ -146,4 +153,10 @@ console.log(`${reactions.length} reactions: ${JSON.stringify(countLabels(reactio
 printLabelRatesByProject(reactions);
 printSessionMetricsByProject(allSessionEvents);
 printReplyTraits(reactions);
-printProblemSessions(reactions, allSessionEvents);
+const promptsByKey = new Map(
+  allSessionEvents
+    .flatMap(collectPromptsAfterReplies)
+    .map((promptWithReply) => [promptKey(promptWithReply.sessionId, promptWithReply.promptTime.toISOString()), promptWithReply]),
+);
+printProblemSessions(reactions, promptsByKey);
+printStatedPreferences(reactions, promptsByKey);

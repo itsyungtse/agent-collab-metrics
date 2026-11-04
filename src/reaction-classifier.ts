@@ -20,6 +20,24 @@ const REACTION_QUESTIONS = {
     },
   },
 };
+// Asked in its own request: asking it together with the reaction question pulled reaction labels toward confusion.
+const PREFERENCE_QUESTIONS = {
+  preference: {
+    type: "choice",
+    instructions: "Does the user message state how the agent should work from now on, beyond the current task?",
+    criteria: {
+      lasting:
+        "The user states a rule or habit the agent should keep in future tasks, such as wording, format, language, tools or workflow",
+      this_task_only:
+        "The message only concerns the current task, such as approving, answering the agent's question, picking an option, or asking for a summary or a table this once",
+    },
+  },
+};
+
+interface DecisionAnswer {
+  choice: string;
+  confidence: number;
+}
 
 export interface ReactionToReply {
   label: string;
@@ -43,6 +61,7 @@ export interface ReactionRecord {
   replyCharacters: number;
   replyHasCodeBlock: boolean;
   replyEnglishTerms: number;
+  statesPreference?: boolean;
 }
 
 export function collectPromptsAfterReplies(sessionEvents: Event[]): PromptWithReply[] {
@@ -81,19 +100,33 @@ export function recordsAfter(records: ReactionRecord[], since: Date | null): Rea
   return since ? records.filter((record) => new Date(record.promptTime) > since) : records;
 }
 
-export async function classifyReaction(promptWithReply: PromptWithReply, modelName: string): Promise<ReactionToReply> {
+async function askDecisionModel(
+  promptWithReply: PromptWithReply,
+  modelName: string,
+  questions: object,
+): Promise<Record<string, DecisionAnswer>> {
   const state =
     `Agent reply (end): ${promptWithReply.agentReply.slice(-MAX_REPLY_CHARACTERS)}\n\n` +
     `User message: ${promptWithReply.prompt.slice(0, MAX_PROMPT_CHARACTERS)}`;
   const response = await fetch(SYSTEM_ONE_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: modelName, state, questions: REACTION_QUESTIONS }),
+    body: JSON.stringify({ model: modelName, state, questions }),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MILLISECONDS),
   });
   if (!response.ok) throw new Error(`System One request failed: ${response.status} ${await response.text()}`);
-  const { answers } = (await response.json()) as { answers: { reaction: { choice: string; confidence: number } } };
-  return { label: answers.reaction.choice, confidence: answers.reaction.confidence };
+  const { answers } = (await response.json()) as { answers: Record<string, DecisionAnswer> };
+  return answers;
+}
+
+export async function classifyReaction(promptWithReply: PromptWithReply, modelName: string): Promise<ReactionToReply> {
+  const { reaction } = await askDecisionModel(promptWithReply, modelName, REACTION_QUESTIONS);
+  return { label: reaction.choice, confidence: reaction.confidence };
+}
+
+export async function messageStatesPreference(promptWithReply: PromptWithReply, modelName: string): Promise<boolean> {
+  const { preference } = await askDecisionModel(promptWithReply, modelName, PREFERENCE_QUESTIONS);
+  return preference.choice === "lasting";
 }
 
 function describeReply(agentReply: string) {
@@ -114,5 +147,6 @@ export async function reactionRecord(promptWithReply: PromptWithReply, modelName
     label: reaction.label,
     confidence: reaction.confidence,
     ...describeReply(promptWithReply.agentReply),
+    statesPreference: await messageStatesPreference(promptWithReply, modelName),
   };
 }

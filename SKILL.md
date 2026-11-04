@@ -1,9 +1,9 @@
 ---
 name: agent-collab-metrics
-description: Classify how the user reacts to each agent reply (correction, confusion, accept, new request) with a local Ollama decision model, report where collaboration goes wrong, and turn recurring corrections and confusion into rules in ~/.claude/CLAUDE.md. Use when the user wants to set up collaboration metrics, see the collaboration report, check whether the rules reduced problems over time, benchmark the decision model, change how many replies the hook waits for before it suggests a rules update, when the agent-collab-metrics hook says it is time to update rules, or when the user asks to update the rules learned from past conversations.
-argument-hint: "[setup | classify | report | trend | benchmark | interval | rules] [flags]"
+description: Classify how the user reacts to each agent reply (correction, confusion, accept, new request) with a local Ollama decision model, report where collaboration goes wrong, and turn recurring corrections and confusion into rules in ~/.claude/CLAUDE.md. Use when the user wants to set up collaboration metrics, see the collaboration report, check whether the rules reduced problems over time, benchmark or switch the decision model, change how many replies the hook waits for before it suggests a rules update, when the agent-collab-metrics hook says it is time to update rules, or when the user asks to update the rules learned from past conversations.
+argument-hint: "[setup | --model <name> | classify | report | trend | benchmark | interval | rules] [flags]"
 metadata:
-  version: "0.0.3"
+  version: "0.0.4"
 ---
 
 # Agent collab metrics
@@ -19,6 +19,7 @@ The first word after `/agent-collab-metrics` picks the command. Pass the remaini
 | Command | What it does |
 |---|---|
 | `setup` | Pick the decision model, add the Stop hook, classify past replies |
+| `--model <name>` | Switch the decision model without classifying past replies again |
 | `classify [--latest N]` | Classify past replies again from scratch |
 | `report [--since-rules] [--confidence 0.6] [--quote-characters 500]` | Label rates per project and the sessions with the most problems |
 | `trend` | Weekly `correction` and `confusion` rates, marking the weeks the rules were updated |
@@ -38,6 +39,12 @@ Also run this when the user wants to change the decision model.
 4. Tell the user that setup adds a Stop hook to `~/.claude/settings.json` that classifies new replies after every turn. After they agree, run `node <skill-dir>/src/setup.ts --model <name>`. It refuses a model that cannot classify, and says why.
 5. Run `node <skill-dir>/src/classify-all.ts`, adding `--latest 200` if the user chose the short option. The whole history can take more than ten minutes, so run it in the background and report when it is done.
 6. If 500 or more replies were classified, offer to run `rules` right away.
+
+## --model
+
+1. If the user gave no model name, run `node <skill-dir>/src/setup.ts --list-models` and ask which one to use.
+2. Run `node <skill-dir>/src/setup.ts --model <name>`. It tries the model on one sample reply, refuses a model that cannot classify and says why, and does not add the Stop hook twice.
+3. Tell the user that past labels still come from the previous model, so `report` and `trend` mix both models until they run `classify` again.
 
 ## classify
 

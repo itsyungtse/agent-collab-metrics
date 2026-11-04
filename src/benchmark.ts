@@ -1,7 +1,7 @@
 import { readSessions } from "./claude-code.ts";
 import { PROJECTS_DIRECTORY, readModelName } from "./local-data.ts";
 import { median } from "./median.ts";
-import { classifyReaction, collectPromptsAfterReplies } from "./reaction-classifier.ts";
+import { collectPromptsAfterReplies, reactionRecord } from "./reaction-classifier.ts";
 
 const DEFAULT_SAMPLE_SIZE = 200;
 const RANDOM_SEED = 0;
@@ -36,7 +36,7 @@ const labelCounts: Record<string, number> = {};
 const startedAt = performance.now();
 for (const promptWithReply of promptsToClassify) {
   const callStartedAt = performance.now();
-  const { label } = await classifyReaction(promptWithReply, modelName);
+  const { label } = await reactionRecord(promptWithReply, modelName);
   labelCounts[label] = (labelCounts[label] ?? 0) + 1;
   secondsPerCall.push((performance.now() - callStartedAt) / 1000);
 }

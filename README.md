@@ -12,14 +12,15 @@ Keyword matching doesn't find these moments. "Wait, why does this need two servi
 
 ## How it works
 
-1. **Classify.** When the agent finishes a reply, a Claude Code Stop hook takes the end of the agent's reply and the message you sent next. It asks an Ollama decision model to label your message as `correction`, `confusion`, `accept` or `new_request`, with a confidence score. Only messages you typed count; subagent traffic, interruptions and text that Claude Code injects are skipped. With `nimble` on Apple silicon, each label takes about 0.4 seconds.
+1. **Classify.** When the agent finishes a reply, a Claude Code Stop hook takes the end of the agent's reply and the message you sent next. It asks an Ollama decision model to label your message as `correction`, `confusion`, `accept` or `new_request`, with a confidence score. In a second request it asks whether your message states how the agent should work from now on, such as a writing style or a testing habit. Only messages you typed count; subagent traffic, interruptions and text that Claude Code injects are skipped. With `nimble` on Apple silicon, both requests together take about 0.8 seconds per message.
 2. **Report.** `/agent-collab-metrics report` shows:
    - label rates per project
    - turns and interruptions per session
    - how much the agent explores before its first edit
    - what replies look like before each kind of reaction
    - the sessions with the most confident corrections and confusion, quoted from the logs
-3. **Learn.** After every 500 new labels (change the number with `interval`), the hook suggests `/agent-collab-metrics rules`. Claude reads the quoted sessions and drafts three to seven short rules, each tied to a pattern it found, then shows them to you. Once you approve, they go into a marked block at the end of `~/.claude/CLAUDE.md`. The next update replaces that block, so the file doesn't keep growing.
+   - the messages where you stated a lasting preference, quoted from the logs
+3. **Learn.** After every 500 new labels (change the number with `interval`), the hook suggests `/agent-collab-metrics rules`. Claude reads the quoted sessions and preferences and drafts three to seven short rules, each tied to a pattern it found, then shows them to you. Once you approve, they go into a marked block at the end of `~/.claude/CLAUDE.md`. The next update replaces that block, so the file doesn't keep growing.
 
 A rules block looks like this:
 
@@ -48,7 +49,7 @@ Read https://raw.githubusercontent.com/itsyungtse/agent-collab-metrics/main/INST
 
 Claude installs the skill and runs setup with you. It asks which Ollama model to use and whether to label your whole history or only the latest 200 replies, then shows you the Stop hook before adding it to `~/.claude/settings.json`. To install by hand, see [INSTALL.md](INSTALL.md).
 
-Labeling a full history of about 1,400 replies takes around 10 minutes. If you end up with 500 or more labels, setup offers to draft your first rules right away.
+Labeling a full history of about 1,900 replies takes around 25 minutes. If you end up with 500 or more labels, setup offers to draft your first rules right away.
 
 ## Commands
 
@@ -70,7 +71,7 @@ With no command, the skill runs `setup` the first time and lists these commands 
 ## Your data stays local
 
 - Session logs are read on your machine. To label them, they're sent only to Ollama on `localhost`.
-- Labels are stored without message text. Each record holds the session id, the message time, the label and its confidence, and a few traits of the agent's reply: its length, whether it had a code block, and how many English terms it used.
+- Labels are stored without message text. Each record holds the session id, the message time, the label and its confidence, whether the message states a preference, and a few traits of the agent's reply: its length, whether it had a code block, and how many English terms it used.
 - Drafting rules is the one step that shows conversation text to Claude. It reads short quotes from your own sessions, which Claude already saw when they happened.
 - Nothing changes in `CLAUDE.md` until you approve the draft.
 
@@ -108,6 +109,7 @@ This deletes only the skill files. To finish uninstalling, also remove:
 
 - **Labels aren't hand-validated yet.** Treat the rates as a direction rather than a measurement. The quoted problem sessions only use labels with a confidence of 0.8 or higher; to change that threshold, pass `--confidence`.
 - **Ollama has to be running.** If it isn't, the hook does nothing and catches up at your next reply in the same session. If a session ends while Ollama is down, its messages are labeled only when you run `classify` again.
+- **Preference detection is rough.** In 350 of our own messages, about two in three of the messages flagged as preferences only concerned the task at hand. Claude reads each one and skips those when drafting rules. Messages labeled before version 0.0.5 have no preference flag until you run `classify` again.
 - **Rules are only as good as the quotes.** A session is quoted only if it has at least two confident problems. Claude is told to leave out any rule it can't tie to a quote. Read the draft before you approve it.
 
 ## Development

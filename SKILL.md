@@ -1,14 +1,14 @@
 ---
 name: agent-collab-metrics
-description: Classify how the user reacts to each agent reply (correction, confusion, accept, new request) with a local Ollama decision model, report where collaboration goes wrong, and turn recurring corrections and confusion into rules in ~/.claude/CLAUDE.md. Use when the user wants to set up collaboration metrics, see the collaboration report, check whether the rules reduced problems over time, benchmark or switch the decision model, change how many replies the hook waits for before it suggests a rules update, when the agent-collab-metrics hook says it is time to update rules, or when the user asks to update the rules learned from past conversations.
+description: Classify how the user reacts to each agent reply (correction, confusion, accept, new request) and whether the message states a lasting preference with a local Ollama decision model, report where collaboration goes wrong, and turn recurring corrections, confusion and stated preferences into rules in ~/.claude/CLAUDE.md. Use when the user wants to set up collaboration metrics, see the collaboration report, check whether the rules reduced problems over time, benchmark or switch the decision model, change how many replies the hook waits for before it suggests a rules update, when the agent-collab-metrics hook says it is time to update rules, or when the user asks to update the rules learned from past conversations.
 argument-hint: "[setup | --model <name> | classify | report | trend | benchmark | interval | rules] [flags]"
 metadata:
-  version: "0.0.4"
+  version: "0.0.5"
 ---
 
 # Agent collab metrics
 
-Every time the agent finishes a reply, a Stop hook classifies the user's latest messages with a local Ollama decision model. After every 500 classified replies (change the number with `interval`), the hook asks the user to run `/agent-collab-metrics rules` to turn the recurring problems into rules in `~/.claude/CLAUDE.md`.
+Every time the agent finishes a reply, a Stop hook classifies the user's latest messages with a local Ollama decision model, and asks it in a second request whether each message states how the agent should work from now on. After every 500 classified replies (change the number with `interval`), the hook asks the user to run `/agent-collab-metrics rules` to turn the recurring problems into rules in `~/.claude/CLAUDE.md`.
 
 `<skill-dir>` below is the directory that contains this SKILL.md. Data is kept in `~/.agent-collab-metrics/`. Talk to the user in the language they write in.
 
@@ -21,7 +21,7 @@ The first word after `/agent-collab-metrics` picks the command. Pass the remaini
 | `setup` | Pick the decision model, add the Stop hook, classify past replies |
 | `--model <name>` | Switch the decision model without classifying past replies again |
 | `classify [--latest N]` | Classify past replies again from scratch |
-| `report [--since-rules] [--confidence 0.6] [--quote-characters 500]` | Label rates per project and the sessions with the most problems |
+| `report [--since-rules] [--confidence 0.6] [--quote-characters 500]` | Label rates per project, the sessions with the most problems, and the stated preferences |
 | `trend` | Weekly `correction` and `confusion` rates, marking the weeks the rules were updated |
 | `benchmark [sample size]` | Time the decision model on a sample of past replies (200 by default) |
 | `interval [replies]` | Show or change how many new replies trigger the rules reminder (500 by default) |
@@ -35,9 +35,9 @@ Also run this when the user wants to change the decision model.
 
 1. Run `node --version`. Node 22.18 or newer is required, because the scripts are run as `.ts` files directly. If it is older, ask the user to upgrade Node and stop.
 2. Run `node <skill-dir>/src/setup.ts --list-models`, which lists the installed Ollama models that have the `decision` capability, and ask the user which one to use. If Ollama cannot be reached, or no decision model is installed, tell the user to install Ollama 0.35 or newer and run `ollama pull nimble`, then stop.
-3. Ask whether to classify the whole history or only the latest 200 replies. Each reply takes about half a second.
+3. Ask whether to classify the whole history or only the latest 200 replies. Each reply takes just under a second.
 4. Tell the user that setup adds a Stop hook to `~/.claude/settings.json` that classifies new replies after every turn. After they agree, run `node <skill-dir>/src/setup.ts --model <name>`. It refuses a model that cannot classify, and says why.
-5. Run `node <skill-dir>/src/classify-all.ts`, adding `--latest 200` if the user chose the short option. The whole history can take more than ten minutes, so run it in the background and report when it is done.
+5. Run `node <skill-dir>/src/classify-all.ts`, adding `--latest 200` if the user chose the short option. The whole history can take more than twenty minutes, so run it in the background and report when it is done.
 6. If 500 or more replies were classified, offer to run `rules` right away.
 
 ## --model
@@ -48,13 +48,14 @@ Also run this when the user wants to change the decision model.
 
 ## classify
 
-1. Tell the user this replaces every record in `~/.agent-collab-metrics/reactions.jsonl`, and that each reply takes about half a second. Wait for them to confirm.
+1. Tell the user this replaces every record in `~/.agent-collab-metrics/reactions.jsonl`, and that each reply takes just under a second. Wait for them to confirm.
 2. Run `node <skill-dir>/src/classify-all.ts` with the user's flags. Run it in the background unless `--latest` is small, and report when it is done.
 
 ## report
 
 1. Run `node <skill-dir>/src/report.ts` with the user's flags.
-2. Point out the projects with the highest `correction` and `confusion` rates, then the sessions with the most problems and what the quotes have in common. Keep the full output available if the user wants it.
+2. Point out the projects with the highest `correction` and `confusion` rates, then the sessions with the most problems and what the quotes have in common, then the preferences the user stated more than once. Keep the full output available if the user wants it.
+3. If few reactions were checked for preferences, the rest were classified before preferences were recorded. Suggest `classify` to fill them in.
 
 ## trend
 
@@ -77,7 +78,9 @@ Also run this when the user wants to change the decision model.
 Run this when the hook says it is time to update rules, or when the user asks.
 
 1. Run `node <skill-dir>/src/report.ts --since-rules`.
-2. Read the last section, which quotes the sessions with the most `confusion` or `correction`. Look for what the agent kept doing that the user had to correct or ask about.
-3. Draft 3 to 7 short rules under the heading `## Lessons from past conversations`. Each rule must come from a pattern in the quotes, for example "Explain a technical term in one sentence before using it". Leave out anything you cannot tie to a quote. If the quotes show no clear pattern, say so and stop.
+2. Read the last two sections.
+   - The sessions with the most `confusion` or `correction`: look for what the agent kept doing that the user had to correct or ask about.
+   - The messages that state a lasting preference: about two in three of them only concern the task at hand, so skip those and keep the ones the user would want in every task.
+3. Draft 3 to 7 short rules under the heading `## Lessons from past conversations`. Each rule must come from a pattern in the quotes or from a preference the user stated, for example "Explain a technical term in one sentence before using it". Leave out anything you cannot tie to a quote. If the quotes show no clear pattern, say so and stop.
 4. Show the draft, and explain that it replaces the previous rules inside the `agent-collab-metrics` block of `~/.claude/CLAUDE.md`. Wait for the user to confirm or edit it.
 5. Pipe the confirmed rules into `node <skill-dir>/src/apply-rules.ts`, for example with a heredoc. This also restarts the count for the reminder.

@@ -57,6 +57,7 @@ Run `/agent-collab-metrics <command>`, or ask Claude in your own words.
 | Command | What it does |
 |---|---|
 | `setup` | Pick the decision model, add the Stop hook and label past replies |
+| `--model <name>` | Switch the decision model without labeling past replies again |
 | `report [--since-rules] [--confidence 0.6] [--quote-characters 500]` | Show label rates per project and the sessions with the most problems |
 | `trend` | Chart the weekly correction and confusion rates, marking the weeks the rules were updated, to check whether the rules help |
 | `rules` | Draft rules from the problem sessions and write them into `~/.claude/CLAUDE.md` after you approve |

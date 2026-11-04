@@ -4,6 +4,7 @@ import { CLAUDE_SETTINGS_FILE, readJsonFile, saveModelName, writeJsonFile } from
 import { OLLAMA_URL, classifyReaction, type PromptWithReply } from "./reaction-classifier.ts";
 
 const HOOK_TIMEOUT_SECONDS = 30;
+const STOP_HOOK_SCRIPT = "agent-collab-metrics/src/hook.ts";
 const SAMPLE_PROMPT_WITH_REPLY: PromptWithReply = {
   projectDirectory: "",
   sessionId: "",
@@ -54,7 +55,8 @@ function registerStopHook(): void {
   const settings = readJsonFile(CLAUDE_SETTINGS_FILE);
   settings.hooks ??= {};
   const stopHookGroups: HookGroup[] = (settings.hooks.Stop ??= []);
-  if (stopHookGroups.some((group) => group.hooks.some((hook) => hook.command === command))) {
+  // The skill folder is often a symlink, so the same hook can be registered under another path.
+  if (stopHookGroups.some((group) => group.hooks.some((hook) => hook.command.includes(STOP_HOOK_SCRIPT)))) {
     console.log(`Stop hook already in ${CLAUDE_SETTINGS_FILE}`);
     return;
   }
